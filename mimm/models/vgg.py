@@ -96,7 +96,7 @@ class VGG(nn.Module):
         self.features = make_layers(cfg, batch_norm=batch_norm)
         self.avgpool = AdaptiveAveragePool2D((7, 7))
         self.classifier = nn.Sequential(
-            nn.Linear(512, 4096),
+            nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(),
             nn.Dropout(p=dropout),
             nn.Linear(4096, 4096),
@@ -118,37 +118,25 @@ class VGG(nn.Module):
     def load_pytorch_weights(self, weights_path: Path):
         import torch
 
+        self.pytorch_weight_compatable = True
         weights = torch.load(weights_path, map_location="cpu")
         for i, layer in enumerate(self.features.layers):
             if isinstance(layer, nn.Conv2d):
                 layer.weight = mx.array(
                     weights[f"features.{i}.weight"].detach().cpu().numpy(),
-                    dtype=mx.float16,
+                    # dtype=mx.float16,
                 ).transpose(0, 2, 3, 1)
                 layer.bias = mx.array(
                     weights[f"features.{i}.bias"].detach().cpu().numpy(),
-                    dtype=mx.float16,
+                    # dtype=mx.float16,
                 )
         for i, layer in enumerate(self.classifier.layers):
             if isinstance(layer, nn.Linear):
                 layer.weight = mx.array(
                     weights[f"classifier.{i}.weight"].detach().cpu().numpy(),
-                    dtype=mx.float16,
+                    # dtype=mx.float16,
                 )
                 layer.bias = mx.array(
                     weights[f"classifier.{i}.bias"].detach().cpu().numpy(),
-                    dtype=mx.float16,
+                    # dtype=mx.float16,
                 )
-
-    @classmethod
-    def from_pytorch_weights(
-        cls,
-        cfg: List,
-        weights_path: Path,
-        num_classes: int = 1000,
-        dropout: float = 0.5,
-    ) -> nn.Module:
-        """Load a VGG model from a PyTorch weights file."""
-        model = VGG(cfg, num_classes, dropout, pytorch_weight_compatable=True)
-        model.load_pytorch_weights(weights_path)
-        return model

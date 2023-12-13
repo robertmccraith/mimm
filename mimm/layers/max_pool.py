@@ -25,24 +25,34 @@ class MaxPool2d(nn.Module):
         # padding
         x = mx.pad(x, pad_width=self.padding)
         B, H, W, C = x.shape
-
         # max pool by reshaping
         ks = self.kernel_size
-        x = x.reshape(
-            B,
-            H // ks[0],
-            ks[0],
-            W // ks[1],
-            ks[1],
-            C,
+        x = mx.concatenate(
+            [
+                mx.concatenate(
+                    [
+                        x[:, j : j + ks[0], i : i + ks[1], :].max(
+                            axis=(1, 2), keepdims=True
+                        )
+                        for i in range(0, W, self.stride[1])
+                        if i + ks[1] <= W
+                    ],
+                    axis=2,
+                )
+                for j in range(0, H, self.stride[0])
+                if j + ks[0] <= H
+            ],
+            axis=1,
         )
-        x = mx.max(x, axis=(2, 4))
+
         return x
 
 
 if __name__ == "__main__":
-    # t = mx.arange(32 * 224 * 224 * 64).reshape(32, 224, 224, 64)
-    t = mx.arange(16).reshape(1, 4, 4, 1)
-    bn = MaxPool2d(2, 2, 0)
+    s = 13
+    t = mx.arange(s**2).reshape(1, s, s, 1)
+    mp = MaxPool2d(3, 2, 0)
     print(t[..., 0])
-    print(bn(t))
+    pooled = mp(t)
+    print(pooled[..., 0])
+    print(pooled.shape)

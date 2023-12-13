@@ -4,23 +4,13 @@ import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from mimm.datasets.cifar100 import CIFAR100
 from mimm.models.vgg import VGG
-from mimm.transforms.transforms import (
-    Composer,
-    Normalize,
-    RandomHorizontalFlip,
-)
+from mimm.scripts.utils import cifar_transforms, collate_fn, eval_fn, plot_graphs
+
 from torch.utils.data import DataLoader
-from scipy.ndimage import gaussian_filter1d
 
-
-def collate_fn(batch):
-    images, labels = list(zip(*batch))
-    images = mx.array(np.stack(images), dtype=mx.float32)
-    labels = mx.array(labels, dtype=mx.int32)
-    return images, labels
+from mimm.scripts.validate import validate
 
 
 def loss_fn(model, X, y):
@@ -28,27 +18,6 @@ def loss_fn(model, X, y):
     xe = nn.losses.cross_entropy(p, y)
     mx.simplify(xe)
     return mx.mean(xe)
-
-
-def eval_fn(X, y):
-    return mx.mean(mx.argmax(X, axis=1) == y)
-
-
-def plot_graphs(losses, accuracies, epoch, name):
-    plt.clf()
-    xs = np.arange(len(losses)) / (len(losses) / epoch)
-    plt.plot(xs, losses)
-    smooth = gaussian_filter1d(losses, sigma=0.1 * len(losses) / epoch)
-    plt.plot(xs, smooth)
-    plt.title("Loss")
-    plt.savefig(f"{name}-loss.png")
-    plt.clf()
-    xs = np.arange(len(accuracies)) / (len(accuracies) / epoch)
-    plt.plot(xs, accuracies)
-    smooth = gaussian_filter1d(accuracies, sigma=0.1 * len(accuracies) / epoch)
-    plt.plot(xs, smooth)
-    plt.title("Accuracy")
-    plt.savefig(f"{name}-accuracy.png")
 
 
 def train(model, loss_and_grad_fn, train_dataloader, optimizer):
@@ -66,7 +35,6 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
         loss, grads = loss_and_grad_fn(model, image, label)
         optimizer.update(model, grads)
         mx.eval(model.parameters(), optimizer.state)
-        # print(model.features.layers[0].weight[0, 0, 0, 0], grads["features"]["layers"][0]["weight"][0, 0, 0, 0])
         losses.append(loss.item())
         prog_bar = {"loss": np.mean(losses[-10:])}
         if batch_idx % 10 == 0:
@@ -78,42 +46,6 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
         prog_bar["acc"] = np.mean(accuracy[-10:])
         progress.set_postfix(prog_bar)
     return losses, accuracy
-
-
-def validate(model, loss_and_grad_fn, val_dataloader):
-    model.eval()
-    losses = []
-    accuracy = []
-    progress = tqdm(
-        enumerate(val_dataloader),
-        desc="Validation",
-        total=len(val_dataloader),
-        ncols=80,
-    )
-    for batch_idx, batch in progress:
-        image, label = collate_fn(batch)
-        X = model(image)
-        loss, grads = loss_and_grad_fn(X, label)
-        losses.append(loss.item())
-        acc = eval_fn(X, label)
-        accuracy.append(acc.item())
-        progress.set_postfix({"loss": np.mean(losses), "acc": np.mean(accuracy)})
-    return losses, accuracy
-
-
-def cifar_transforms():
-    train_transforms = Composer(
-        [
-            RandomHorizontalFlip(),
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-    val_transforms = Composer(
-        [
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-    return train_transforms, val_transforms
 
 
 def main(data_path, epochs=100, eval_every=10, batch_size=256):

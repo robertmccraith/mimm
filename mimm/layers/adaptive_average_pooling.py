@@ -30,8 +30,8 @@ def adaptive_average_pool2d(
     x = x.reshape(
         B, H // output_size[0], output_size[0], W // output_size[1], output_size[1], C
     )
-    x = mx.mean(x, axis=(2, 4))
-    return x.squeeze()
+    x = mx.mean(x, axis=(1, 3))
+    return x
 
 
 class AdaptiveAveragePool2D(nn.Module):
