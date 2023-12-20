@@ -62,16 +62,5 @@ def plot_graphs(losses, accuracies, epoch, name):
     plt.savefig(f"{name}-accuracy.png")
 
 
-def collate_fn(batch):
-    images, labels = list(zip(*batch))
-    images = mx.array(np.stack(images), dtype=mx.float32)
-    labels = mx.array(labels, dtype=mx.int32)
-    return images, labels
-
-
 def eval_fn(X, y):
     return mx.mean(mx.argmax(X, axis=1) == y)
-
-
-def identity(x):
-    return x

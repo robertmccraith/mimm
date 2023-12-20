@@ -13,8 +13,8 @@ class BatchNorm2d(nn.Module):
         self.weight = mx.ones(dim)
         self.bias = mx.zeros(dim)
         # buffers (trained with a running 'momentum update')
-        self.running_mean = np.zeros(dim)
-        self.running_var = np.ones(dim)
+        self.running_mean = mx.zeros(dim)
+        self.running_var = mx.ones(dim)
 
     def __call__(self, x):
         # calculate the forward pass

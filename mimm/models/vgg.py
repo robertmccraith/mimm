@@ -13,6 +13,7 @@ from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
 
 from mimm.layers.batch_norm import BatchNorm2d
 from mimm.layers.max_pool import MaxPool2d
+from mimm.models.utils import load_pytorch_weights
 
 
 def make_layers(cfg: List[Union[str, int]], batch_norm: bool = False) -> nn.Sequential:
@@ -89,7 +90,6 @@ class VGG(nn.Module):
         cfg: List,
         num_classes: int = 1000,
         dropout: float = 0.5,
-        pytorch_weight_compatable: bool = False,
         batch_norm: bool = False,
     ) -> None:
         super().__init__()
@@ -104,39 +104,21 @@ class VGG(nn.Module):
             nn.Dropout(p=dropout),
             nn.Linear(4096, num_classes),
         )
-        self.pytorch_weight_compatable = pytorch_weight_compatable
 
     def __call__(self, x: mx.array) -> mx.array:
         x = self.features(x)
         x = self.avgpool(x)
-        if self.pytorch_weight_compatable:
-            x = x.transpose(0, 3, 1, 2)
         x = x.reshape(x.shape[0], -1)
         x = self.classifier(x)
         return x
 
     def load_pytorch_weights(self, weights_path: Path):
-        import torch
-
-        self.pytorch_weight_compatable = True
-        weights = torch.load(weights_path, map_location="cpu")
-        for i, layer in enumerate(self.features.layers):
-            if isinstance(layer, nn.Conv2d):
-                layer.weight = mx.array(
-                    weights[f"features.{i}.weight"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                ).transpose(0, 2, 3, 1)
-                layer.bias = mx.array(
-                    weights[f"features.{i}.bias"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
-        for i, layer in enumerate(self.classifier.layers):
-            if isinstance(layer, nn.Linear):
-                layer.weight = mx.array(
-                    weights[f"classifier.{i}.weight"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
-                layer.bias = mx.array(
-                    weights[f"classifier.{i}.bias"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
+        load_pytorch_weights(self, weights_path, conv_layers=["features"])
+        classifier_in = self.classifier.layers[0].weight.shape[0]
+        latent_shape = [512, 7, 7]
+        self.classifier.layers[0].weight = (
+            self.classifier.layers[0]
+            .weight.reshape(classifier_in, *latent_shape)
+            .transpose(0, 2, 3, 1)
+            .reshape(classifier_in, -1)
+        )

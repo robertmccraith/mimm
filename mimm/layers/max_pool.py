@@ -8,7 +8,7 @@ class MaxPool2d(nn.Module):
         self,
         kernel_size: Union[int, Tuple[int, int]],
         stride: Union[int, Tuple[int, int]],
-        padding: Union[int, Tuple[int, int]] = 0,
+        padding: int = 0,
     ):
         super().__init__()
         self.kernel_size = (
@@ -17,15 +17,12 @@ class MaxPool2d(nn.Module):
             else (kernel_size, kernel_size)
         )
         self.stride = stride if isinstance(stride, tuple) else (stride, stride)
-        self.padding = (
-            (padding, padding) if isinstance(padding, int) else (padding[0], padding[1])
-        )
+        self.padding = [(0, 0), (padding, padding), (padding, padding), (0, 0)]
 
     def __call__(self, x: mx.array) -> mx.array:
         # padding
         x = mx.pad(x, pad_width=self.padding)
-        B, H, W, C = x.shape
-        # max pool by reshaping
+        _, H, W, _ = x.shape
         ks = self.kernel_size
         x = mx.concatenate(
             [
@@ -46,13 +43,3 @@ class MaxPool2d(nn.Module):
         )
 
         return x
-
-
-if __name__ == "__main__":
-    s = 13
-    t = mx.arange(s**2).reshape(1, s, s, 1)
-    mp = MaxPool2d(3, 2, 0)
-    print(t[..., 0])
-    pooled = mp(t)
-    print(pooled[..., 0])
-    print(pooled.shape)

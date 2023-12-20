@@ -12,7 +12,7 @@ class CIFAR100:
     def __init__(self, root: Path, split="train", transform=None):
         super().__init__()
         self.transform = transform
-        data = unpickle(self.root / split)
+        data = unpickle(root / split)
         self.images = data[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
         self.labels = data[b"fine_labels"]
 

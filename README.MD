@@ -4,9 +4,9 @@ This repository contains implementations for image models in [MLX](https://githu
 
 ## Models
 ### Classification
-- [ ] [AlexNet](https://arxiv.org/abs/1404.5997)
+- [x] [AlexNet](https://arxiv.org/abs/1404.5997)
 - [x] [VGG](https://arxiv.org/abs/1409.1556)
-- [ ] [Resnet](https://arxiv.org/abs/1512.03385)
+- [x] [Resnet](https://arxiv.org/abs/1512.03385)
 - [ ] [ViT](https://arxiv.org/abs/2010.11929)
 
 ## Acknowledgements

@@ -4,12 +4,9 @@ import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
 from tqdm import tqdm
-from mimm.datasets.cifar100 import CIFAR100
-from mimm.models.vgg import VGG
-from mimm.scripts.utils import cifar_transforms, collate_fn, eval_fn, plot_graphs
-
-from torch.utils.data import DataLoader
-
+from mimm.models.resnet import BasicBlock, ResNet
+from mimm.scripts.utils import eval_fn, plot_graphs
+from mlx.data.datasets import load_imagenet
 from mimm.scripts.validate import validate
 
 
@@ -27,11 +24,11 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
     progress = tqdm(
         enumerate(train_dataloader),
         desc="Training",
-        total=len(train_dataloader),
         ncols=80,
     )
     for batch_idx, batch in progress:
-        image, label = collate_fn(batch)
+        image = mx.array(batch["image"], dtype=mx.float32)
+        label = mx.array(batch["label"])
         loss, grads = loss_and_grad_fn(model, image, label)
         optimizer.update(model, grads)
         mx.eval(model.parameters(), optimizer.state)
@@ -48,34 +45,51 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
     return losses, accuracy
 
 
+def get_dataset(batch_size, root=None):
+    mean = mx.array([0.485, 0.456, 0.406])
+    std = mx.array([0.229, 0.224, 0.225])
+
+    def normalize(x):
+        x = x.astype("float32") / 255.0
+        return (x - mean) / std
+
+    tr = load_imagenet(root=root)
+    tr_iter = (
+        tr.shuffle()
+        .to_stream()
+        .image_resize_smallest_side("image", 256)
+        .image_random_crop("image", 256, 256)
+        .image_random_h_flip("image", prob=0.5)
+        .image_random_crop("image", 224, 224)
+        .key_transform("image", normalize)
+        .batch(batch_size)
+    )
+
+    test = load_imagenet(root=root, split="val")
+    test_iter = (
+        test.to_stream()
+        .image_resize("image", 256, 256)
+        .image_center_crop("image", 224, 224)
+        .key_transform("image", normalize)
+        .batch(batch_size)
+    )
+
+    return tr_iter, test_iter
+
+
 def main(data_path, epochs=100, eval_every=10, batch_size=256):
-    dataset_class = CIFAR100
-    train_transforms, val_transforms = cifar_transforms()
-    train_dataset = dataset_class(data_path, split="train", transform=train_transforms)
-    val_dataset = dataset_class(data_path, split="test", transform=train_transforms)
-
-    def identity(x):
-        return x
-
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        collate_fn=identity,
-        shuffle=True,
-        num_workers=16,
-    )
-    val_dataloader = DataLoader(
-        val_dataset, batch_size=batch_size, collate_fn=identity, num_workers=8
-    )
-    model = VGG(VGG.cfgs["vgg11"], num_classes=100, batch_norm=True)
+    train_iter, val_iter = get_dataset(batch_size, data_path)
+    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=1000)
+    # model = AlexNet()
+    # model.load_pytorch_weights("alexnet.pth")
+    # model._no_grad = {"features"}
+    # model.apply(lambda x: x.astype(mx.float32))
     optimizer = optim.SGD(learning_rate=1e-1, momentum=0.9)
     loss_and_grad_fn = nn.value_and_grad(model, loss_fn)
     train_losses = []
     train_accs = []
     for e in range(epochs):
-        train_loss, train_acc = train(
-            model, loss_and_grad_fn, train_dataloader, optimizer
-        )
+        train_loss, train_acc = train(model, loss_and_grad_fn, train_iter, optimizer)
         train_losses.extend(train_loss)
         train_accs.extend(train_acc)
         plot_graphs(train_losses, train_accs, e + 1, "train")
@@ -83,9 +97,9 @@ def main(data_path, epochs=100, eval_every=10, batch_size=256):
         print(
             f"Epoch {e} train loss: {np.mean(train_loss)} train acc: {np.mean(train_acc)}"
         )
-        model.save_weights(f"vgg11_{e}")
+        model.save_weights(f"resnet_{e}")
         if e % eval_every == 0:
-            val_loss, val_acc = validate(model, loss_and_grad_fn, val_dataloader)
+            val_loss, val_acc = validate(model, val_iter)
             print(
                 f"Epoch {e} val loss: {np.mean(val_loss)} val acc: {np.mean(val_acc)}"
             )
@@ -93,4 +107,4 @@ def main(data_path, epochs=100, eval_every=10, batch_size=256):
 
 
 if __name__ == "__main__":
-    main(Path("cifar100"))
+    main(Path.home() / "imagenet")

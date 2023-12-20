@@ -1,10 +1,30 @@
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-from torch.utils.data import DataLoader
-from mimm.datasets.imagenet import ImageNet
-from mimm.models.vgg import VGG
-from mimm.scripts.utils import collate_fn, eval_fn, identity, imagenet_transforms
+from mimm.models.resnet import BasicBlock, ResNet
+from mimm.scripts.utils import eval_fn
+from mlx.data.datasets import load_imagenet
+import mlx.core as mx
+
+
+def get_dataset(batch_size, root=None):
+    mean = mx.array([0.485, 0.456, 0.406])
+    std = mx.array([0.229, 0.224, 0.225])
+
+    def normalize(x):
+        x = x.astype("float32") / 255.0
+        return (x - mean) / std
+
+    test = load_imagenet(root=root, split="val")
+    test_iter = (
+        test.to_stream()
+        .image_resize("image", 256, 256)
+        .image_center_crop("image", 224, 224)
+        .key_transform("image", normalize)
+        .batch(batch_size)
+    )
+
+    return test_iter
 
 
 def validate(model, val_dataloader):
@@ -13,11 +33,11 @@ def validate(model, val_dataloader):
     progress = tqdm(
         enumerate(val_dataloader),
         desc="Validation",
-        total=len(val_dataloader),
         ncols=80,
     )
     for batch_idx, batch in progress:
-        image, label = collate_fn(batch)
+        image = mx.array(batch["image"])
+        label = batch["label"]
         X = model(image)
         acc = eval_fn(X, label)
         accuracy.append(acc.item())
@@ -26,18 +46,13 @@ def validate(model, val_dataloader):
 
 
 def main(data_path):
-    _, val_transforms = imagenet_transforms()
-    val_dataset = ImageNet(data_path, split="val", transform=val_transforms)
-
-    val_dataloader = DataLoader(
-        val_dataset, batch_size=32, collate_fn=identity, num_workers=8, shuffle=True
-    )
-    model = VGG(VGG.cfgs["vgg11"])
-    model.load_pytorch_weights("vgg11.pth")
+    val_iter = get_dataset(16, root=data_path)
+    model = ResNet(BasicBlock, [2, 2, 2, 2])
+    model.load_pytorch_weights("resnet18.pth")
     model.eval()
-    val_acc = validate(model, val_dataloader)
+    val_acc = validate(model, val_iter)
     print(f"Validation accuracy: {np.mean(val_acc)}")
 
 
 if __name__ == "__main__":
-    main(Path("/Users/robertmccraith/imagenet"))
+    main(Path.home() / "imagenet")

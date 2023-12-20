@@ -3,6 +3,7 @@ import mlx.nn as nn
 import mlx.core as mx
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
 from mimm.layers.max_pool import MaxPool2d
+from mimm.models.utils import load_pytorch_weights
 
 
 class AlexNet(nn.Module):
@@ -50,27 +51,12 @@ class AlexNet(nn.Module):
         return x
 
     def load_pytorch_weights(self, weights_path: Path):
-        import torch
-
-        self.pytorch_weight_compatable = True
-        weights = torch.load(weights_path, map_location="cpu")
-        for i, layer in enumerate(self.features.layers):
-            if isinstance(layer, nn.Conv2d):
-                layer.weight = mx.array(
-                    weights[f"features.{i}.weight"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                ).transpose(0, 2, 3, 1)
-                layer.bias = mx.array(
-                    weights[f"features.{i}.bias"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
-        for i, layer in enumerate(self.classifier.layers):
-            if isinstance(layer, nn.Linear):
-                layer.weight = mx.array(
-                    weights[f"classifier.{i}.weight"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
-                layer.bias = mx.array(
-                    weights[f"classifier.{i}.bias"].detach().cpu().numpy(),
-                    # dtype=mx.float16,
-                )
+        load_pytorch_weights(self, weights_path, conv_layers=["features"])
+        classifier_in = self.classifier.layers[1].weight.shape[0]
+        latent_shape = [256, 6, 6]
+        self.classifier.layers[1].weight = (
+            self.classifier.layers[1]
+            .weight.reshape(classifier_in, *latent_shape)
+            .transpose(0, 2, 3, 1)
+            .reshape(classifier_in, -1)
+        )
