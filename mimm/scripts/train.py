@@ -21,14 +21,20 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
     model.train()
     losses = []
     accuracy = []
+    train_dataloader.reset()
     progress = tqdm(
         enumerate(train_dataloader),
         desc="Training",
         ncols=80,
     )
+    batch_size = -1
     for batch_idx, batch in progress:
         image = mx.array(batch["image"], dtype=mx.float32)
         label = mx.array(batch["label"])
+        if batch_size == -1:
+            batch_size = image.shape[0]
+        elif batch_size != image.shape[0]:
+            continue
         loss, grads = loss_and_grad_fn(model, image, label)
         optimizer.update(model, grads)
         mx.eval(model.parameters(), optimizer.state)
@@ -38,7 +44,7 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
             X = model(image)
             acc = eval_fn(X, label)
             accuracy.append(acc.item())
-        if batch_idx % 100 == 0:
+        if batch_idx % 500 == 0:
             print("loss", np.mean(losses[-10:]), "acc", np.mean(accuracy[-10:]))
         prog_bar["acc"] = np.mean(accuracy[-10:])
         progress.set_postfix(prog_bar)
@@ -63,6 +69,7 @@ def get_dataset(batch_size, root=None):
         .image_random_crop("image", 224, 224)
         .key_transform("image", normalize)
         .batch(batch_size)
+        .prefetch(prefetch_size=8, num_threads=8)
     )
 
     test = load_imagenet(root=root, split="val")
@@ -72,6 +79,7 @@ def get_dataset(batch_size, root=None):
         .image_center_crop("image", 224, 224)
         .key_transform("image", normalize)
         .batch(batch_size)
+        .prefetch(prefetch_size=8, num_threads=8)
     )
 
     return tr_iter, test_iter
@@ -80,10 +88,6 @@ def get_dataset(batch_size, root=None):
 def main(data_path, epochs=100, eval_every=10, batch_size=256):
     train_iter, val_iter = get_dataset(batch_size, data_path)
     model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=1000)
-    # model = AlexNet()
-    # model.load_pytorch_weights("alexnet.pth")
-    # model._no_grad = {"features"}
-    # model.apply(lambda x: x.astype(mx.float32))
     optimizer = optim.SGD(learning_rate=1e-1, momentum=0.9)
     loss_and_grad_fn = nn.value_and_grad(model, loss_fn)
     train_losses = []
@@ -92,18 +96,17 @@ def main(data_path, epochs=100, eval_every=10, batch_size=256):
         train_loss, train_acc = train(model, loss_and_grad_fn, train_iter, optimizer)
         train_losses.extend(train_loss)
         train_accs.extend(train_acc)
-        plot_graphs(train_losses, train_accs, e + 1, "train")
+        plot_graphs(train_losses, e + 1, "train", "loss")
+        plot_graphs(train_accs, e + 1, "train", "accuracy")
 
         print(
             f"Epoch {e} train loss: {np.mean(train_loss)} train acc: {np.mean(train_acc)}"
         )
         model.save_weights(f"resnet_{e}")
         if e % eval_every == 0:
-            val_loss, val_acc = validate(model, val_iter)
-            print(
-                f"Epoch {e} val loss: {np.mean(val_loss)} val acc: {np.mean(val_acc)}"
-            )
-            plot_graphs(val_loss, val_acc, e + 1, "val")
+            val_acc = validate(model, val_iter)
+            print(f"Epoch {e} val acc: {np.mean(val_acc)}")
+            plot_graphs(val_acc, e + 1, "val", "accuracy")
 
 
 if __name__ == "__main__":

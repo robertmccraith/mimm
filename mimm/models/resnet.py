@@ -4,7 +4,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
 
-from mimm.layers.batch_norm import BatchNorm2d
+from mimm.layers.batch_norm import BatchNorm
 from mimm.layers.max_pool import MaxPool2d
 from mimm.models.utils import load_pytorch_weights
 
@@ -46,7 +46,7 @@ class BasicBlock(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm2d
+            norm_layer = BatchNorm
         if groups != 1 or base_width != 64:
             raise ValueError("BasicBlock only supports groups=1 and base_width=64")
         if dilation > 1:
@@ -101,7 +101,7 @@ class Bottleneck(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm2d
+            norm_layer = BatchNorm
         width = int(planes * (base_width / 64.0)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
@@ -151,7 +151,7 @@ class ResNet(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm2d
+            norm_layer = BatchNorm
         self._norm_layer = norm_layer
 
         self.inplanes = 64

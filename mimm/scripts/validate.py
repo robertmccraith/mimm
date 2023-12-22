@@ -30,14 +30,20 @@ def get_dataset(batch_size, root=None):
 def validate(model, val_dataloader):
     model.eval()
     accuracy = []
+    val_dataloader.reset()
     progress = tqdm(
         enumerate(val_dataloader),
         desc="Validation",
         ncols=80,
     )
+    batch_size = -1
     for batch_idx, batch in progress:
-        image = mx.array(batch["image"])
-        label = batch["label"]
+        image = mx.array(batch["image"], dtype=mx.float32)
+        label = mx.array(batch["label"])
+        if batch_size == -1:
+            batch_size = image.shape[0]
+        elif batch_size != image.shape[0]:
+            continue
         X = model(image)
         acc = eval_fn(X, label)
         accuracy.append(acc.item())

@@ -45,21 +45,14 @@ def imagenet_transforms():
     return train_transforms, val_transforms
 
 
-def plot_graphs(losses, accuracies, epoch, name):
+def plot_graphs(ys, epoch, split, name):
     plt.clf()
-    xs = np.arange(len(losses)) / (len(losses) / epoch)
-    plt.plot(xs, losses)
-    smooth = gaussian_filter1d(losses, sigma=0.1 * len(losses) / epoch)
+    xs = np.arange(len(ys)) / (len(ys) / epoch)
+    plt.plot(xs, ys)
+    smooth = gaussian_filter1d(ys, sigma=0.1 * len(ys) / epoch)
     plt.plot(xs, smooth)
-    plt.title("Loss")
-    plt.savefig(f"{name}-loss.png")
-    plt.clf()
-    xs = np.arange(len(accuracies)) / (len(accuracies) / epoch)
-    plt.plot(xs, accuracies)
-    smooth = gaussian_filter1d(accuracies, sigma=0.1 * len(accuracies) / epoch)
-    plt.plot(xs, smooth)
-    plt.title("Accuracy")
-    plt.savefig(f"{name}-accuracy.png")
+    plt.title(name)
+    plt.savefig(f"{split}-{name}.png")
 
 
 def eval_fn(X, y):

@@ -11,7 +11,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
 
-from mimm.layers.batch_norm import BatchNorm2d
+from mimm.layers.batch_norm import BatchNorm
 from mimm.layers.max_pool import MaxPool2d
 from mimm.models.utils import load_pytorch_weights
 
@@ -26,7 +26,7 @@ def make_layers(cfg: List[Union[str, int]], batch_norm: bool = False) -> nn.Sequ
             v = int(v)
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, BatchNorm2d(v), nn.ReLU()]
+                layers += [conv2d, BatchNorm(v), nn.ReLU()]
             else:
                 layers += [conv2d, nn.ReLU()]
             in_channels = v
