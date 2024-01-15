@@ -3,9 +3,6 @@ from typing import Callable, List, Optional, Type, Union
 import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
-
-from mimm.layers.batch_norm import BatchNorm
-from mimm.layers.max_pool import MaxPool2d
 from mimm.models.utils import load_pytorch_weights
 
 
@@ -46,7 +43,7 @@ class BasicBlock(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm
+            norm_layer = nn.BatchNorm
         if groups != 1 or base_width != 64:
             raise ValueError("BasicBlock only supports groups=1 and base_width=64")
         if dilation > 1:
@@ -101,7 +98,7 @@ class Bottleneck(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm
+            norm_layer = nn.BatchNorm
         width = int(planes * (base_width / 64.0)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
@@ -151,7 +148,7 @@ class ResNet(nn.Module):
     ) -> None:
         super().__init__()
         if norm_layer is None:
-            norm_layer = BatchNorm
+            norm_layer = nn.BatchNorm
         self._norm_layer = norm_layer
 
         self.inplanes = 64
@@ -172,7 +169,7 @@ class ResNet(nn.Module):
         )
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU()
-        self.maxpool = MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(
             block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0]
@@ -185,7 +182,6 @@ class ResNet(nn.Module):
         )
         self.avgpool = AdaptiveAveragePool2D((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-        self.pytorch_weight_compatable = False
 
     def _make_layer(
         self,
@@ -253,5 +249,4 @@ class ResNet(nn.Module):
         return x
 
     def load_pytorch_weights(self, weights_path: Path):
-        self.pytorch_weight_compatable = True
         load_pytorch_weights(self, weights_path, ["conv", "downsample"])

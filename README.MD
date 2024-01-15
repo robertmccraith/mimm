@@ -1,6 +1,6 @@
 # MLX Image Models
 ## Introduction
-This repository contains implementations for image models in [MLX](https://github.com/ml-explore/mlx) with functions to load pretrained weights from pytorch. Example training code is provided in `mimm/scripts` with some use of PyTorch DataLoading.
+This repository contains implementations for image models in [MLX](https://github.com/ml-explore/mlx) with functions to load pretrained weights from pytorch. Example training code is provided in `mimm/scripts`.
 
 ## Models
 ### Classification

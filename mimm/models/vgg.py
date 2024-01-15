@@ -1,18 +1,11 @@
 """VGG
-
-Adapted from https://github.com/pytorch/vision 'vgg.py' (BSD-3-Clause) with a few changes for
-timm functionality.
-
-Copyright 2021 Ross Wightman
+Adapted from https://github.com/huggingface/pytorch-image-models/blob/main/timm/models/vgg.py
 """
 from pathlib import Path
 from typing import Union, List, Dict
 import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
-
-from mimm.layers.batch_norm import BatchNorm
-from mimm.layers.max_pool import MaxPool2d
 from mimm.models.utils import load_pytorch_weights
 
 
@@ -21,12 +14,12 @@ def make_layers(cfg: List[Union[str, int]], batch_norm: bool = False) -> nn.Sequ
     in_channels = 3
     for v in cfg:
         if v == "M":
-            layers += [MaxPool2d(kernel_size=2, stride=2)]
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
         else:
             v = int(v)
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, BatchNorm(v), nn.ReLU()]
+                layers += [conv2d, nn.BatchNorm(v), nn.ReLU()]
             else:
                 layers += [conv2d, nn.ReLU()]
             in_channels = v
@@ -113,7 +106,9 @@ class VGG(nn.Module):
         return x
 
     def load_pytorch_weights(self, weights_path: Path):
-        load_pytorch_weights(self, weights_path, conv_layers=["features"])
+        load_pytorch_weights(
+            self, weights_path, conv_layers=["features"], padding_layers=["features.20"]
+        )
         classifier_in = self.classifier.layers[0].weight.shape[0]
         latent_shape = [512, 7, 7]
         self.classifier.layers[0].weight = (
