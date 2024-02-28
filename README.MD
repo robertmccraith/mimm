@@ -7,7 +7,8 @@ This repository contains implementations for image models in [MLX](https://githu
 - [x] [AlexNet](https://arxiv.org/abs/1404.5997)
 - [x] [VGG](https://arxiv.org/abs/1409.1556)
 - [x] [Resnet](https://arxiv.org/abs/1512.03385)
-- [ ] [ViT](https://arxiv.org/abs/2010.11929)
+- [x] [MobileNetV3](https://arxiv.org/abs/1905.02244) 
+- [x] [ViT](https://arxiv.org/abs/2010.11929)
 
 ## Acknowledgements
 This repository is based on the following repositories:
