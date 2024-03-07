@@ -57,7 +57,6 @@ def tree_unflatten(tree):
         return d
 
 
-# def apply_weights(model, weights):
 def apply(dst, parameters):
     if isinstance(parameters, dict):
         for k in parameters:
@@ -71,35 +70,32 @@ def apply(dst, parameters):
                 elif isinstance(current_value, (dict, list)):
                     apply(current_value, new_value)
     elif isinstance(parameters, list):
-        for i in range(len(dst)):
+        for i in range(len(parameters)):
             current_value = dst[i]
             new_value = parameters[i]
             if isinstance(current_value, mx.array):
                 dst[i] = new_value
             elif isinstance(current_value, nn.Module):
-                current_value.update(new_value)
+                apply(current_value, new_value)
             elif isinstance(current_value, (dict, list)):
                 apply(current_value, new_value)
 
 
 def load_pytorch_weights(
-    model, weights_path: Path, conv_layers: List[str], padding_layers=[]
+    model,
+    weights_path: Path,
+    conv_layers: List[str],
+    padding_layers=[],
 ):
     import torch
 
-    weights = torch.load(weights_path, map_location="cpu")
-    weights = tree_flatten(weights)  # + [(name, {}) for name in padding_layers]
-    model_parameter_names = [name for name, _ in tree_flatten(model)]
+    weights = torch.load(weights_path, map_location="cpu")["model"]
+    weights = tree_flatten(weights)
     w2 = []
     for k, v in weights:
         v = mx.array(v.detach().cpu().numpy())
         if any(conv_layer in k for conv_layer in conv_layers) and len(v.shape) == 4:
             v = v.transpose(0, 2, 3, 1)
-        # batch norm running mean/var have _ at start of name
-        k_split = k.split(".")
-        _k = ".".join(k_split[:-1]) + "._" + k_split[-1]
-        if _k in model_parameter_names:
-            k = _k
         w2.append((k, v))
     w2 += [(name, {}) for name in padding_layers]
     ws = tree_unflatten(w2)

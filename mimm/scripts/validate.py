@@ -30,7 +30,6 @@ def get_dataset(batch_size, root=None):
 def validate(model, val_dataloader):
     model.eval()
     accuracy = []
-    val_dataloader.reset()
     progress = tqdm(
         enumerate(val_dataloader),
         desc="Validation",
@@ -48,6 +47,7 @@ def validate(model, val_dataloader):
         acc = eval_fn(X, label)
         accuracy.append(acc.item())
         progress.set_postfix({"acc": np.mean(accuracy)})
+    val_dataloader.reset()
     return accuracy
 
 

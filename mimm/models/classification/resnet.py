@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, List, Optional, Type, Union
+from typing import Callable, Dict, List, Optional, Type, Union
 import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
@@ -18,7 +18,7 @@ def conv3x3(
         padding=dilation,
         # groups=groups,
         bias=False,
-        # dilation=dilation,
+        dilation=dilation,
     )
 
 
@@ -248,5 +248,66 @@ class ResNet(nn.Module):
 
         return x
 
+    def features(self, x: mx.array) -> Dict[str, mx.array]:
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        feature_layers = {}
+        x = self.layer1(x)
+        feature_layers["layer1"] = x
+        x = self.layer2(x)
+        feature_layers["layer2"] = x
+        x = self.layer3(x)
+        feature_layers["layer3"] = x
+        x = self.layer4(x)
+        feature_layers["layer4"] = x
+
+        return feature_layers
+
     def load_pytorch_weights(self, weights_path: Path):
         load_pytorch_weights(self, weights_path, ["conv", "downsample"])
+
+
+TORCH_CACHE = Path().home() / ".cache/torch/hub/checkpoints"
+
+
+def resnet18(pretrained: bool = False, **kwargs) -> ResNet:
+    """Constructs a ResNet-18 model."""
+    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    if pretrained:
+        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet18-f37072fd.pth")
+    return model
+
+
+def resnet34(pretrained: bool = False, **kwargs) -> ResNet:
+    """Constructs a ResNet-34 model."""
+    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+    if pretrained:
+        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet34-b627a593.pth")
+    return model
+
+
+def resnet50(pretrained: bool = False, **kwargs) -> ResNet:
+    """Constructs a ResNet-50 model."""
+    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+    if pretrained:
+        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet50-0676ba61.pth")
+    return model
+
+
+def resnet101(pretrained: bool = False, **kwargs) -> ResNet:
+    """Constructs a ResNet-101 model."""
+    model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+    if pretrained:
+        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet101-63fe2227.pth")
+    return model
+
+
+def resnet152(pretrained: bool = False, **kwargs) -> ResNet:
+    """Constructs a ResNet-152 model."""
+    model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
+    if pretrained:
+        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet152-394f9c45.pth")
+    return model

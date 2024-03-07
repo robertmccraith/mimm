@@ -37,8 +37,8 @@ def imagenet_transforms():
     )
     val_transforms = Composer(
         [
-            Resize(256),
-            RandomCrop(224),
+            Resize(800),
+            # RandomCrop(800),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )

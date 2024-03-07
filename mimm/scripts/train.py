@@ -21,7 +21,6 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
     model.train()
     losses = []
     accuracy = []
-    train_dataloader.reset()
     progress = tqdm(
         enumerate(train_dataloader),
         desc="Training",
@@ -33,7 +32,7 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
         label = mx.array(batch["label"])
         if batch_size == -1:
             batch_size = image.shape[0]
-        elif batch_size != image.shape[0]:
+        elif batch_size != image.shape[0] or batch_idx < 3000:
             continue
         loss, grads = loss_and_grad_fn(model, image, label)
         optimizer.update(model, grads)
@@ -48,6 +47,7 @@ def train(model, loss_and_grad_fn, train_dataloader, optimizer):
             print("loss", np.mean(losses[-10:]), "acc", np.mean(accuracy[-10:]))
         prog_bar["acc"] = np.mean(accuracy[-10:])
         progress.set_postfix(prog_bar)
+    train_dataloader.reset()
     return losses, accuracy
 
 
