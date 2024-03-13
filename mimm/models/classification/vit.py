@@ -3,6 +3,8 @@ from typing import Callable, Optional
 
 import mlx.core as mx
 import mlx.nn as nn
+from mimm.models._registry import register_model
+from mimm.models.utils import get_pytorch_weights, load_pytorch_weights
 
 
 class MLPBlock(nn.Sequential):
@@ -35,7 +37,7 @@ class EncoderBlock(nn.Module):
 
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
-        self.self_attention = nn.MultiHeadAttention(hidden_dim, num_heads)
+        self.self_attention = nn.MultiHeadAttention(hidden_dim, num_heads, bias=True)
         self.dropout = nn.Dropout(dropout)
 
         # MLP block
@@ -188,3 +190,130 @@ class VisionTransformer(nn.Module):
         x = self.heads(x)
 
         return x
+
+    def load_pytorch_weights(self, weights_path: str):
+        def layer_name_changes(k, v):
+            if "encoder_layer_" in k:
+                k = k.replace("encoder_layer_", "encoder.layers.")
+            if "layers.encoder.layers" in k:
+                k = k.replace("layers.encoder.layers", "layers")
+            if "in_proj_weight" in k:
+                output = []
+                query, key, value = mx.split(v, 3, axis=0)
+                output.append((k.replace("in_proj_weight", "query_proj.weight"), query))
+                output.append((k.replace("in_proj_weight", "key_proj.weight"), key))
+                output.append((k.replace("in_proj_weight", "value_proj.weight"), value))
+                return output
+            if "in_proj_bias" in k:
+                output = []
+                query, key, value = mx.split(v, 3, axis=0)
+                output.append((k.replace("in_proj_bias", "query_proj.bias"), query))
+                output.append((k.replace("in_proj_bias", "key_proj.bias"), key))
+                output.append((k.replace("in_proj_bias", "value_proj.bias"), value))
+                return output
+            if "linear_1" in k:
+                k = k.replace("linear_1", "0")
+            if "linear_2" in k:
+                k = k.replace("linear_2", "3")
+            if "heads.head" in k:
+                k = k.replace("heads.head", "heads.layers")
+            return [(k, v)]
+
+        def layer_modify(weights):
+            weights["heads"] = {"layers": [weights["heads"]["layers"]]}
+
+        load_pytorch_weights(
+            self,
+            weights_path,
+            conv_layers=["conv_proj"],
+            layer_name_changes=layer_name_changes,
+            layer_modify=layer_modify,
+        )
+
+
+@register_model()
+def vit_b_16(pretrained: bool = True, **kwargs) -> VisionTransformer:
+    model = VisionTransformer(
+        image_size=224,
+        patch_size=16,
+        num_layers=12,
+        num_heads=12,
+        hidden_dim=768,
+        mlp_dim=3072,
+        **kwargs,
+    )
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/vit_b_16-c867db91.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def vit_b_32(pretrained: bool = True, **kwargs) -> VisionTransformer:
+    model = VisionTransformer(
+        image_size=224,
+        patch_size=32,
+        num_layers=12,
+        num_heads=12,
+        hidden_dim=768,
+        mlp_dim=3072,
+        **kwargs,
+    )
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/vit_b_32-d86f8d99.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def vit_l_16(pretrained: bool = True, **kwargs) -> VisionTransformer:
+    model = VisionTransformer(
+        image_size=224,
+        patch_size=16,
+        num_layers=24,
+        num_heads=16,
+        hidden_dim=1024,
+        mlp_dim=4096,
+        **kwargs,
+    )
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/vit_l_16-852ce7e3.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def vit_l_32(pretrained: bool = True, **kwargs) -> VisionTransformer:
+    model = VisionTransformer(
+        image_size=224,
+        patch_size=32,
+        num_layers=24,
+        num_heads=16,
+        hidden_dim=1024,
+        mlp_dim=4096,
+        **kwargs,
+    )
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/vit_l_32-c7638314.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def vit_h_14(pretrained: bool = True, **kwargs) -> VisionTransformer:
+    model = VisionTransformer(
+        image_size=224,
+        patch_size=14,
+        num_layers=32,
+        num_heads=16,
+        hidden_dim=1280,
+        mlp_dim=5120,
+        **kwargs,
+    )
+    if pretrained:
+        raise NotImplementedError("Pretrained weights not available for this model!")
+    return model

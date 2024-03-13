@@ -10,6 +10,8 @@ from mimm.models.shared_layers import (
     SqueezeExcitation,
     _make_divisible,
 )
+from mimm.models._registry import register_model
+from mimm.models.utils import get_pytorch_weights, load_pytorch_weights
 
 
 class InvertedResidualConfig:
@@ -82,6 +84,7 @@ class InvertedResidual(nn.Module):
                 kernel_size=cnf.kernel,
                 stride=stride,
                 dilation=cnf.dilation,
+                groups=cnf.expanded_channels,
                 norm_layer=norm_layer,
                 activation_layer=activation_layer,
             )
@@ -302,9 +305,25 @@ def _mobilenet_v3_conf(
     return inverted_residual_setting, last_channel
 
 
-def mobilenet_v3_large(**kwargs: Any) -> MobileNetV3:
-    return MobileNetV3(*_mobilenet_v3_conf("mobilenet_v3_large", **kwargs))
+@register_model()
+def mobilenet_v3_large(pretrained: bool = True, **kwargs: Any) -> MobileNetV3:
+    model = MobileNetV3(*_mobilenet_v3_conf("mobilenet_v3_large", **kwargs))
+    if pretrained:
+        raise NotImplementedError(
+            "Pretrained weights are not available for this model until groups are implemlented in Conv2d"
+        )
+        weights_url = (
+            "https://download.pytorch.org/models/mobilenet_v3_large-8738ca79.pth"
+        )
+        weights = get_pytorch_weights(weights_url)
+        load_pytorch_weights(model, weights, conv_layers=["features"])
+    return model
 
 
-def mobilenet_v3_small(**kwargs: Any) -> MobileNetV3:
+@register_model()
+def mobilenet_v3_small(pretrained: bool = True, **kwargs: Any) -> MobileNetV3:
+    if pretrained:
+        raise NotImplementedError(
+            "Pretrained weights are not available for this model until groups are implemlented in Conv2d"
+        )
     return MobileNetV3(*_mobilenet_v3_conf("mobilenet_v3_small", **kwargs))

@@ -3,7 +3,8 @@ from typing import Callable, Dict, List, Optional, Type, Union
 import mlx.core as mx
 import mlx.nn as nn
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
-from mimm.models.utils import load_pytorch_weights
+from mimm.models.utils import get_pytorch_weights, load_pytorch_weights
+from mimm.models._registry import register_model
 
 
 def conv3x3(
@@ -273,41 +274,80 @@ class ResNet(nn.Module):
 TORCH_CACHE = Path().home() / ".cache/torch/hub/checkpoints"
 
 
-def resnet18(pretrained: bool = False, **kwargs) -> ResNet:
+@register_model()
+def resnet18(pretrained: bool = True, **kwargs) -> ResNet:
     """Constructs a ResNet-18 model."""
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet18-f37072fd.pth")
+        weights_url = "https://download.pytorch.org/models/resnet18-f37072fd.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
     return model
 
 
-def resnet34(pretrained: bool = False, **kwargs) -> ResNet:
+@register_model()
+def resnet34(pretrained: bool = True, **kwargs) -> ResNet:
     """Constructs a ResNet-34 model."""
     model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet34-b627a593.pth")
+        weights_url = "https://download.pytorch.org/models/resnet34-b627a593.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
     return model
 
 
-def resnet50(pretrained: bool = False, **kwargs) -> ResNet:
+@register_model()
+def resnet50(pretrained: bool = True, **kwargs) -> ResNet:
     """Constructs a ResNet-50 model."""
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet50-0676ba61.pth")
+        weights_url = "https://download.pytorch.org/models/resnet50-0676ba61.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
     return model
 
 
-def resnet101(pretrained: bool = False, **kwargs) -> ResNet:
+@register_model()
+def resnet101(pretrained: bool = True, **kwargs) -> ResNet:
     """Constructs a ResNet-101 model."""
     model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
     if pretrained:
-        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet101-63fe2227.pth")
+        weights_url = "https://download.pytorch.org/models/resnet101-63fe2227.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
     return model
 
 
-def resnet152(pretrained: bool = False, **kwargs) -> ResNet:
+@register_model()
+def resnet152(pretrained: bool = True, **kwargs) -> ResNet:
     """Constructs a ResNet-152 model."""
     model = ResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
     if pretrained:
-        model.load_pytorch_weights(f"{TORCH_CACHE}/resnet152-394f9c45.pth")
+        weights_url = "https://download.pytorch.org/models/resnet152-394f9c45.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def wide_resnet50_2(pretrained: bool = True, **kwargs) -> ResNet:
+    """Constructs a Wide ResNet-50-2 model."""
+    model = ResNet(Bottleneck, [3, 4, 6, 3], width_per_group=64 * 2, **kwargs)
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/wide_resnet50_2-95faca4d.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model
+
+
+@register_model()
+def wide_resnet101_2(pretrained: bool = True, **kwargs) -> ResNet:
+    """Constructs a Wide ResNet-101-2 model."""
+    model = ResNet(Bottleneck, [3, 4, 23, 3], width_per_group=64 * 2, **kwargs)
+    if pretrained:
+        weights_url = (
+            "https://download.pytorch.org/models/wide_resnet101_2-32ee1156.pth"
+        )
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
     return model

@@ -7,12 +7,12 @@ repos:
           - --include-star-import
           - --ignore-init
           - --gitignore
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.1.7
+  - repo: https://github.com/myint/autoflake
+    rev: v1.4
     hooks:
-      # Run the linter.
-      - id: ruff
-        args: [--line-length=120]
-      # Run the formatter.
-      - id: ruff-format
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variable
+          - --ignore-init-module-imports

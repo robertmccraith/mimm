@@ -2,7 +2,8 @@ from pathlib import Path
 import mlx.nn as nn
 import mlx.core as mx
 from mimm.layers.adaptive_average_pooling import AdaptiveAveragePool2D
-from mimm.models.utils import load_pytorch_weights
+from mimm.models.utils import get_pytorch_weights, load_pytorch_weights
+from mimm.models._registry import register_model
 
 
 class AlexNet(nn.Module):
@@ -59,3 +60,13 @@ class AlexNet(nn.Module):
             .transpose(0, 2, 3, 1)
             .reshape(classifier_in, -1)
         )
+
+
+@register_model()
+def alexnet(pretrained: bool = True, **kwargs) -> AlexNet:
+    model = AlexNet(**kwargs)
+    if pretrained:
+        weights_url = "https://download.pytorch.org/models/alexnet-owt-7be5be79.pth"
+        weights = get_pytorch_weights(weights_url)
+        model.load_pytorch_weights(weights)
+    return model

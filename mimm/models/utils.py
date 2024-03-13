@@ -1,8 +1,10 @@
-from pathlib import Path
-from typing import List
+from typing import Dict, List
 from mlx.utils import tree_flatten
 import mlx.core as mx
 import mlx.nn as nn
+from pathlib import Path
+import torch
+from torch.hub import download_url_to_file, get_dir
 
 
 def tree_unflatten(tree):
@@ -81,23 +83,55 @@ def apply(dst, parameters):
                 apply(current_value, new_value)
 
 
+def get_pytorch_weights(weights_url: str) -> Dict:
+    hub_dir = get_dir()
+    model_dir = Path(hub_dir) / "checkpoints"
+
+    filename = Path(weights_url).name
+    cached_file = model_dir / filename
+    if not cached_file.exists():
+        download_url_to_file(weights_url, cached_file)
+    return cached_file
+
+
 def load_pytorch_weights(
     model,
-    weights_path: Path,
+    weights: Path,
     conv_layers: List[str],
     padding_layers=[],
+    layer_name_changes=None,
+    layer_modify=None,
 ):
-    import torch
-
-    weights = torch.load(weights_path, map_location="cpu")["model"]
+    weights = torch.load(weights)
     weights = tree_flatten(weights)
     w2 = []
     for k, v in weights:
         v = mx.array(v.detach().cpu().numpy())
         if any(conv_layer in k for conv_layer in conv_layers) and len(v.shape) == 4:
             v = v.transpose(0, 2, 3, 1)
-        w2.append((k, v))
+        if layer_name_changes:
+            kvs = layer_name_changes(k, v)
+            for k, v in kvs:
+                w2.append((k, v))
+        else:
+            w2.append((k, v))
     w2 += [(name, {}) for name in padding_layers]
     ws = tree_unflatten(w2)
+    import numpy as np
 
+    pre_weights = {
+        k: np.array(v.tolist())
+        for k, v in tree_flatten(model.children())
+        if isinstance(v, mx.array)
+    }
+    if layer_modify:
+        layer_modify(ws)
     apply(model.children(), ws)
+    post_weights = {
+        k: np.array(v.tolist())
+        for k, v in tree_flatten(model.children())
+        if isinstance(v, mx.array)
+    }
+    for k, v in pre_weights.items():
+        if np.linalg.norm(v - post_weights[k]) < 0.1:
+            print(k)
