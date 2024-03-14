@@ -4,6 +4,8 @@ on:
     types: [published]
 jobs:
   pypi:
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
