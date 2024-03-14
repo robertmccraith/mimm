@@ -77,3 +77,8 @@ build/
 
 # Jetbrains
 .cache
+
+*.jpg
+*.png
+*.txt
+
