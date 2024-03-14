@@ -1,17 +1,12 @@
-name: Publish to PyPI.org
-on:
-  release:
-    types: [published]
+name: Create a new patch release
+on: workflow_dispatch
 jobs:
-  pypi:
+  github:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - run: python3 -m pip install --upgrade build && python3 -m build
-      - name: Publish package
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Create new patch release
+        run: .github/scripts/release.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
