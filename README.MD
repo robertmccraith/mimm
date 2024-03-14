@@ -3,6 +3,23 @@
 This repository contains implementations for image models in [MLX](https://github.com/ml-explore/mlx) with functions to load pretrained weights from PyTorch.
 Example training code is provided in `mimm/scripts`.
 
+## Installation
+```bash
+pip install mimm
+```
+
+## Usage
+```python
+from mimm import get_model, list_models
+
+# List available models
+print(list_models())
+
+# Load a model and convert weights from torchvision
+model = get_model('resnet50', pretrained=True)
+```
+
+
 ## Models
 ### Classification
 - [x] [AlexNet](https://arxiv.org/abs/1404.5997)
